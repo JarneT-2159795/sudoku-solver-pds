@@ -1,7 +1,10 @@
-all: compile run
+all: create compile run
+
+create:
+	python3 generator.py
 
 compile:
-	g++ -g -std=c++20 -o main.out *.cpp
+	g++ -g -pthread -fopenmp -std=c++2a -o main.out *.cpp
 
 run:
 	./main.out
