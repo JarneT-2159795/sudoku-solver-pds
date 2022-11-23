@@ -132,7 +132,7 @@ else:
     # Remove random numbers
     for i in range(0, SIZE):
         for j in range(0, SIZE):
-            if randint(0, 1) == 0:
+            if randint(0, 100) <= 70:
                 grid[i][j] = 0
 
 # Start Removing Numbers one by one
