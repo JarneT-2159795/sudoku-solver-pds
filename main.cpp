@@ -28,14 +28,14 @@ int main()
 	{
 		bool resultSerial = false, resultParallel = false;
 		t1.start();
-		//resultSerial = serialSolve(grid, 0, 0);
+		resultSerial = serialSolve(grid, 0, 0);
 		t1.stop();
 		t2.start();
 		resultParallel = parallelSolve(grid, 0, 0);
 		t2.stop();
 		if (resultSerial)
 		{
-			cout << "Serial solution found" << endl;
+			cout << "Serial solved!" << endl;
 		}
 		if (resultParallel)
 		{
@@ -57,11 +57,12 @@ bool parallelSolve(vector<vector<int>> grid, int row, int col)
 	#pragma omp parallel for num_threads(threadCount)
 	for (int num = 1; num <= SIZE; num++)
 	{
+		auto localGrid = grid;
 		bool local_result = false;
-		if (isSafe(grid, row, col, num))
+		if (isSafe(localGrid, row, col, num) || localGrid[row][col] != 0)
 		{
-			grid[row][col] = num;
-			parallelSolveHelper(grid, row, col + 1, &local_result);
+			localGrid[row][col] = num;
+			parallelSolveHelper(localGrid, row, col + 1, &local_result);
 		}
 		if (local_result)
 		{
