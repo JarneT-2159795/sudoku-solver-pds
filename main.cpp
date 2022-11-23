@@ -6,19 +6,18 @@
 #include "sudoku.h"
 #include "omp.h"
 #include <vector>
-#include <semaphore.h>
 
 using namespace std;
-sem_t isSolved;
+static bool isSolved = false;
 
 bool serialSolve(vector<vector<int>> grid, int row, int col);
 bool parallelSolve(vector<vector<int>> grid, int row, int col);
-void parallelSolveHelper(vector<vector<int>> grid, int row, int col, bool *solved);
+void parallelSolveHelper(vector<vector<int>> grid, int row, int col);
 bool isSafe(vector<vector<int>> grid, int row, int col, int num);
+void printGrid(vector<vector<int>> grid);
 
 int main()
 {
-	sem_init(&isSolved, 0, 1);
 	AutoAverageTimer t1("Serial  "), t2("Parallel");
 	vector<vector<int>> grid(SIZE, vector<int>(SIZE));
 	for (int i = 0; i < SIZE; i++)
@@ -33,64 +32,45 @@ int main()
 		t2.start();
 		resultParallel = parallelSolve(grid, 0, 0);
 		t2.stop();
-		if (resultSerial)
-		{
-			cout << "Serial solved!" << endl;
-		}
-		if (resultParallel)
-		{
-			cout << "Parallel solved!" << endl;
-		}
+		if (resultSerial != resultParallel)
+			cout << "Serial and Parallel results do not match!" << endl;
+		else if (resultSerial)
+			cout << "Solved!" << endl;
+		else
+			cout << "No solution!" << endl;
 	}
 	t1.report();
 	t2.report();
-	sem_destroy(&isSolved);
 	return 0;
 }
 
 bool parallelSolve(vector<vector<int>> grid, int row, int col)
 {
-	bool solved[SIZE] = {false};
 	int threadCount = SIZE;
 	if (threadCount > omp_get_max_threads())
 		threadCount = omp_get_max_threads();
-	#pragma omp parallel for num_threads(threadCount)
+	#pragma omp parallel for num_threads(threadCount) shared(isSolved)
 	for (int num = 1; num <= SIZE; num++)
 	{
 		auto localGrid = grid;
-		bool local_result = false;
 		if (isSafe(localGrid, row, col, num) || localGrid[row][col] != 0)
 		{
 			localGrid[row][col] = num;
-			parallelSolveHelper(localGrid, row, col + 1, &local_result);
-		}
-		if (local_result)
-		{
-			solved[num - 1] = true;
+			parallelSolveHelper(localGrid, row, col + 1);
 		}
 	}
-	for (int i = 0; i < SIZE; i++)
-	{
-		if (solved[i])
-		{
-			return true;
-		}
-	}
-	return false;
+	return isSolved;
 }
 
-void parallelSolveHelper(vector<vector<int>> grid, int row, int col, bool *solved)
+void parallelSolveHelper(vector<vector<int>> grid, int row, int col)
 {
-	int sem_value = 0;
-	sem_getvalue(&isSolved, &sem_value);
-	if (sem_value == 0)
+	if (isSolved)
 	{
 		return;
 	}
 	if (row == SIZE - 1 && col == SIZE)
 	{
-		*solved = true;
-		sem_wait(&isSolved);
+		isSolved = true;
 		return;
 	}
 
@@ -102,7 +82,7 @@ void parallelSolveHelper(vector<vector<int>> grid, int row, int col, bool *solve
 
 	if (grid[row][col] > 0)
 	{
-		parallelSolveHelper(grid, row, col + 1, solved);
+		parallelSolveHelper(grid, row, col + 1);
 		return;
 	}
 
@@ -112,16 +92,13 @@ void parallelSolveHelper(vector<vector<int>> grid, int row, int col, bool *solve
 		{
 			grid[row][col] = num;
 
-			parallelSolveHelper(grid, row, col + 1, solved);
-			if (*solved)
+			parallelSolveHelper(grid, row, col + 1);
+			if (isSolved)
 				return;
 		}
 
 		grid[row][col] = 0;
 	}
-
-	*solved = false;
-	return;
 }
 
 bool serialSolve(vector<vector<int>> grid, int row, int col)
@@ -173,4 +150,14 @@ bool isSafe(vector<vector<int>> grid, int row, int col, int num)
 				return false;
 
 	return true;
+}
+
+void printGrid(vector<vector<int>> grid)
+{
+	for (int row = 0; row < SIZE; row++)
+	{
+		for (int col = 0; col < SIZE; col++)
+			cout << grid[row][col] << " ";
+		cout << endl;
+	}
 }
