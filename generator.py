@@ -4,7 +4,7 @@ from time import sleep
 
 SUB_SIZE = 3
 SIZE = SUB_SIZE * SUB_SIZE
-isSolvable = False
+isSolvable = True
 
 # initialise empty grid
 grid = []
@@ -134,13 +134,13 @@ else:
         for j in range(0, SIZE):
             if randint(0, 1) == 0:
                 grid[i][j] = 0
-sleep(1)
-
 
 # Start Removing Numbers one by one
 # A higher number of attempts will end up removing more numbers from the grid
 # Potentially resulting in more difficiult grids to solve!
-attempts = 20
+attempts = 5
+if not isSolvable:
+    attempts = 0
 counter = 1
 while attempts > 0:
     # Select a random cell that is not already empty
