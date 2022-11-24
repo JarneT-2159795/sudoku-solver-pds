@@ -8,10 +8,10 @@
 #include <vector>
 
 using namespace std;
-static bool isSolved = false;
+static int serialSolved = 0, parallelSolved = 0;
 
-bool serialSolve(vector<vector<int>> grid, int row, int col);
-bool parallelSolve(vector<vector<int>> grid, int row, int col);
+void serialSolve(vector<vector<int>> grid, int row, int col);
+void parallelSolve(vector<vector<int>> grid, int row, int col);
 void parallelSolveHelper(vector<vector<int>> grid, int row, int col);
 bool isSafe(vector<vector<int>> grid, int row, int col, int num);
 void printGrid(vector<vector<int>> grid);
@@ -25,17 +25,16 @@ int main()
 			grid[i][j] = s.grid[i][j];
 	for (int i = 0; i < 1; i++)
 	{
-		bool resultSerial = false, resultParallel = false;
 		t1.start();
-		resultSerial = serialSolve(grid, 0, 0);
+		serialSolve(grid, 0, 0);
 		t1.stop();
 		t2.start();
-		resultParallel = parallelSolve(grid, 0, 0);
+		parallelSolve(grid, 0, 0);
 		t2.stop();
-		if (resultSerial != resultParallel)
+		if (serialSolved != parallelSolved)
 			cout << "Serial and Parallel results do not match!" << endl;
-		else if (resultSerial)
-			cout << "Solved!" << endl;
+		else if (serialSolved > 0)
+			cout << "Found " << serialSolved << " solutions!" << endl;
 		else
 			cout << "No solution!" << endl;
 	}
@@ -44,33 +43,43 @@ int main()
 	return 0;
 }
 
-bool parallelSolve(vector<vector<int>> grid, int row, int col)
+void parallelSolve(vector<vector<int>> grid, int row, int col)
 {
 	int threadCount = SIZE;
 	if (threadCount > omp_get_max_threads())
 		threadCount = omp_get_max_threads();
-	#pragma omp parallel for num_threads(threadCount) shared(isSolved)
+	while (grid[row][col] != 0)
+	{
+		col++;
+		if (col == SIZE)
+		{
+			col = 0;
+			row++;
+			if (row == SIZE)
+			{
+				parallelSolved++;
+				return;
+			}
+		}
+	}
+	#pragma omp parallel for num_threads(threadCount)
 	for (int num = 1; num <= SIZE; num++)
 	{
 		auto localGrid = grid;
-		if (isSafe(localGrid, row, col, num) || localGrid[row][col] != 0)
+		if (isSafe(localGrid, row, col, num))
 		{
 			localGrid[row][col] = num;
 			parallelSolveHelper(localGrid, row, col + 1);
 		}
 	}
-	return isSolved;
 }
 
 void parallelSolveHelper(vector<vector<int>> grid, int row, int col)
 {
-	if (isSolved)
-	{
-		return;
-	}
 	if (row == SIZE - 1 && col == SIZE)
 	{
-		isSolved = true;
+		#pragma omp atomic
+		parallelSolved++;
 		return;
 	}
 
@@ -93,18 +102,19 @@ void parallelSolveHelper(vector<vector<int>> grid, int row, int col)
 			grid[row][col] = num;
 
 			parallelSolveHelper(grid, row, col + 1);
-			if (isSolved)
-				return;
 		}
 
 		grid[row][col] = 0;
 	}
 }
 
-bool serialSolve(vector<vector<int>> grid, int row, int col)
+void serialSolve(vector<vector<int>> grid, int row, int col)
 {
 	if (row == SIZE - 1 && col == SIZE)
-		return true;
+	{
+		serialSolved++;
+		return;
+	}
 
 	if (col == SIZE)
 	{
@@ -113,21 +123,21 @@ bool serialSolve(vector<vector<int>> grid, int row, int col)
 	}
 
 	if (grid[row][col] > 0)
-		return serialSolve(grid, row, col + 1);
+	{
+		serialSolve(grid, row, col + 1);
+		return;
+	}
 
 	for (int num = 1; num <= SIZE; num++)
 	{
 		if (isSafe(grid, row, col, num))
 		{
 			grid[row][col] = num;
-
-			if (serialSolve(grid, row, col + 1))
-				return true;
+			serialSolve(grid, row, col + 1);
 		}
 
 		grid[row][col] = 0;
 	}
-	return false;
 }
 
 bool isSafe(vector<vector<int>> grid, int row, int col, int num)
