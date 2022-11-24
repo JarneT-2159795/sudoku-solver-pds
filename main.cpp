@@ -11,7 +11,6 @@ using namespace std;
 static int serialSolved = 0, parallelSolved = 0;
 
 void serialSolve(vector<vector<int>> grid, int row, int col);
-void parallelSolve(vector<vector<int>> grid, int row, int col);
 void parallelSolveHelper(vector<vector<int>> grid, int row, int col);
 bool isSafe(vector<vector<int>> grid, int row, int col, int num);
 void printGrid(vector<vector<int>> grid);
@@ -29,7 +28,13 @@ int main()
 		serialSolve(grid, 0, 0);
 		t1.stop();
 		t2.start();
-		parallelSolve(grid, 0, 0);
+		#pragma omp parallel
+		{
+			#pragma omp single nowait
+			{
+				parallelSolveHelper(grid, 0, 0);
+			}
+		}
 		t2.stop();
 		if (serialSolved != parallelSolved)
 			cout << "Serial and Parallel results do not match!" << endl;
@@ -41,37 +46,6 @@ int main()
 	t1.report();
 	t2.report();
 	return 0;
-}
-
-void parallelSolve(vector<vector<int>> grid, int row, int col)
-{
-	int threadCount = SIZE;
-	if (threadCount > omp_get_max_threads())
-		threadCount = omp_get_max_threads();
-	while (grid[row][col] != 0)
-	{
-		col++;
-		if (col == SIZE)
-		{
-			col = 0;
-			row++;
-			if (row == SIZE)
-			{
-				parallelSolved++;
-				return;
-			}
-		}
-	}
-	#pragma omp parallel for num_threads(threadCount)
-	for (int num = 1; num <= SIZE; num++)
-	{
-		auto localGrid = grid;
-		if (isSafe(localGrid, row, col, num))
-		{
-			localGrid[row][col] = num;
-			parallelSolveHelper(localGrid, row, col + 1);
-		}
-	}
 }
 
 void parallelSolveHelper(vector<vector<int>> grid, int row, int col)
@@ -94,17 +68,19 @@ void parallelSolveHelper(vector<vector<int>> grid, int row, int col)
 		parallelSolveHelper(grid, row, col + 1);
 		return;
 	}
-
-	for (int num = 1; num <= SIZE; num++)
+	#pragma omp task
 	{
-		if (isSafe(grid, row, col, num))
+	for (int num = 1; num <= SIZE; num++)
 		{
-			grid[row][col] = num;
+			if (isSafe(grid, row, col, num))
+			{
+				grid[row][col] = num;
 
-			parallelSolveHelper(grid, row, col + 1);
+				parallelSolveHelper(grid, row, col + 1);
+			}
+
+			grid[row][col] = 0;
 		}
-
-		grid[row][col] = 0;
 	}
 }
 
