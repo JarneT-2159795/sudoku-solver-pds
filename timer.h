@@ -54,7 +54,7 @@ public:
 		return sum / m_times.size() / 1e3;
 	}
 
-	void report(std::ostream &o = std::cerr, double multiplier = 1e-9, const std::string suffix = " sec")
+	void report(std::ostream &o = std::cout, double multiplier = 1e-9, const std::string suffix = " sec")
 	{
 		double avg = 0;
 		for (auto x : m_times)
