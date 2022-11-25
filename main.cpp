@@ -37,7 +37,10 @@ int main()
 		}
 		t2.stop();
 		if (serialSolved != parallelSolved)
+		{
 			cout << "Serial and Parallel results do not match!" << endl;
+			cout << "Serial: " << serialSolved << endl << "Parallel: " << parallelSolved << endl;
+		}
 		else if (serialSolved > 0)
 			cout << "Found " << serialSolved << " solutions!" << endl;
 		else
@@ -52,8 +55,10 @@ void parallelSolveHelper(vector<vector<int>> grid, int row, int col)
 {
 	if (row == SIZE - 1 && col == SIZE)
 	{
-		#pragma omp atomic
-		parallelSolved++;
+		#pragma omp critical
+		{
+			parallelSolved++;
+		}
 		return;
 	}
 
