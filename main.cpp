@@ -8,46 +8,35 @@
 #include <vector>
 
 using namespace std;
-static int serialSolved = 0, parallelSolved = 0;
+static int parallelSolved = 0;
 
-void serialSolve(vector<vector<int>> grid, int row, int col);
 void parallelSolveHelper(vector<vector<int>> grid, int row, int col);
 bool isSafe(vector<vector<int>> grid, int row, int col, int num);
 void printGrid(vector<vector<int>> grid);
 
 int main()
 {
-	AutoAverageTimer t1("Serial  "), t2("Parallel");
 	vector<vector<int>> grid(SIZE, vector<int>(SIZE));
 	for (int i = 0; i < SIZE; i++)
 		for (int j = 0; j < SIZE; j++)
 			grid[i][j] = s.grid[i][j];
-	for (int i = 0; i < 1; i++)
+	for (int i = 1; i < 33; i *= 2)
 	{
-		t1.start();
-		serialSolve(grid, 0, 0);
-		t1.stop();
-		t2.start();
-		#pragma omp parallel
+		AutoAverageTimer t("Parallel " + to_string(i));
+		for (int j = 0; j < 10; j++)
 		{
-			#pragma omp single nowait
+			t.start();
+			#pragma omp parallel num_threads(i)
 			{
-				parallelSolveHelper(grid, 0, 0);
+				#pragma omp single nowait
+				{
+					parallelSolveHelper(grid, 0, 0);
+				}
 			}
+			t.stop();
 		}
-		t2.stop();
-		if (serialSolved != parallelSolved)
-		{
-			cout << "Serial and Parallel results do not match!" << endl;
-			cout << "Serial: " << serialSolved << endl << "Parallel: " << parallelSolved << endl;
-		}
-		else if (serialSolved > 0)
-			cout << "Found " << serialSolved << " solutions!" << endl;
-		else
-			cout << "No solution!" << endl;
+		t.report();
 	}
-	t1.report();
-	t2.report();
 	return 0;
 }
 
@@ -86,38 +75,6 @@ void parallelSolveHelper(vector<vector<int>> grid, int row, int col)
 
 			grid[row][col] = 0;
 		}
-	}
-}
-
-void serialSolve(vector<vector<int>> grid, int row, int col)
-{
-	if (row == SIZE - 1 && col == SIZE)
-	{
-		serialSolved++;
-		return;
-	}
-
-	if (col == SIZE)
-	{
-		row++;
-		col = 0;
-	}
-
-	if (grid[row][col] > 0)
-	{
-		serialSolve(grid, row, col + 1);
-		return;
-	}
-
-	for (int num = 1; num <= SIZE; num++)
-	{
-		if (isSafe(grid, row, col, num))
-		{
-			grid[row][col] = num;
-			serialSolve(grid, row, col + 1);
-		}
-
-		grid[row][col] = 0;
 	}
 }
 
