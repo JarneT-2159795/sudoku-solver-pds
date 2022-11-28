@@ -20,7 +20,7 @@ int main()
 	for (int i = 0; i < SIZE; i++)
 		for (int j = 0; j < SIZE; j++)
 			grid[i][j] = s.grid[i][j];
-	for (int i = 1; i < 33; i *= 2)
+	for (int i = 1; i < 145; i *= 2)
 	{
 		AutoAverageTimer t("Parallel " + to_string(i));
 		for (int j = 0; j < 10; j++)
